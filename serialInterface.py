@@ -21,6 +21,11 @@ class sInterface:
 	def close():
 		serial.close()
 		return
+class state:
+	def _init_(self, data):
+		self.data = data
+	def _str_(self):
+		return self.data
 class rInterface:
 	def _init_():
 		robot = sInterface()
@@ -32,14 +37,15 @@ class rInterface:
 		sensors = 142
 		buttonPacketID = 18
 		drive = 137
-	def changeState(s,a):
-		if(s.lower() == 'start' or s.lower() == 'passive'):
+		state = state('start' )
+	def changeState(state):
+		if(str(state) == 'start' or str(state) == 'passive'):
 			robot.send(start)
-		elif(s.lower() == 'reset'):
+		elif(str(state) == 'reset'):
 			robot.send(reset)
-		elif(s.lower() == 'stop'):
+		elif(str(state) == 'stop'):
 			robot.send(stop)
-		elif(s.lower() == 'safe'):
+		elif(str(state) == 'safe'):
 			robot.send(safe)
 		else:
 			print "Error: Invalid arguement"
@@ -51,7 +57,7 @@ class rInterface:
 			return bool(state & 0x80)
 		elif(button.lower() == 'schedule'):
 			return bool(state & 0x40)
-		elif(button.lower() == 'day'):
+		elif(button.lower() =='day'):
 			return bool(state & 0x20)
 		elif(button.lower() == 'hour'):
 			return bool(state & 0x10)
@@ -68,4 +74,5 @@ class rInterface:
 		return
 class main:
 	iRobot = rInterface()
-	iRobot.changeState('start')
+	#s = 'start'
+	iRobot.changeState()
