@@ -1,33 +1,28 @@
+import serial
 class sInterface:
-	import serial
-	def _init_():
-		serial = serial.Serial
-	def connect ():
-		serial('/dev/ttyUSB0',115200)
-		serial.open()
+	def __init__(self):
+		serialC = serial.Serial('/dev/ttyUSB0', 115200)
+	def connect (self):
+		self.serialC.close()
+		self.serialC.open()
 		return
-	def send(opCode):
-		serial.write(chr(opCode))
+	def send(self, opCode):
+		serialC.write(chr(opCode))
 		return
-	def send(opCodes):
+	def send(self, opCodes):
 		x = ""
 		for i in range(0, opCodes.len):
 			x = x+chr(opCodes[i])
-		serial.write(x)
+		self.serialC.write(x)
 		return
-	def read():
-		x = serial.inWaiting()
-		return serial.read(x)
-	def close():
-		serial.close()
+	def read(self):
+		x = self.serialC.inWaiting()
+		return self.serialC.read(x)
+	def close(self):
+		self.serialC.close()
 		return
-class state:
-	def _init_(self, data):
-		self.data = data
-	def _str_(self):
-		return self.data
 class rInterface:
-	def _init_():
+	def __init__():
 		robot = sInterface()
 		robot.connect
 		start = 128
@@ -37,42 +32,42 @@ class rInterface:
 		sensors = 142
 		buttonPacketID = 18
 		drive = 137
-		state = state('start' )
-	def changeState(state):
+	def changeState(self, state):
 		if(str(state) == 'start' or str(state) == 'passive'):
-			robot.send(start)
+			self.robot.send(start)
 		elif(str(state) == 'reset'):
-			robot.send(reset)
+			self.robot.send(reset)
 		elif(str(state) == 'stop'):
-			robot.send(stop)
+			self.robot.send(stop)
 		elif(str(state) == 'safe'):
-			robot.send(safe)
+			self.robot.send(safe)
 		else:
 			print "Error: Invalid arguement"
-	def stateOfButton(button):
-		robot.send({sensors, buttonPacketID})
-		state = robot.read
-		state = int(state)
+	def stateOfButton(self, button):
+		self.robot.send({sensors, buttonPacketID})
+		data = self.robot.read
+		data = int(state)
 		if(button.lower() == 'clock'):
-			return bool(state & 0x80)
+			return bool(data & 0x80)
 		elif(button.lower() == 'schedule'):
-			return bool(state & 0x40)
+			return bool(data & 0x40)
 		elif(button.lower() =='day'):
-			return bool(state & 0x20)
+			return bool(data & 0x20)
 		elif(button.lower() == 'hour'):
-			return bool(state & 0x10)
+			return bool(data & 0x10)
 		elif(button.lower() == 'minute'):
-			return bool(state & 0x08)
+			return bool(data & 0x08)
 		elif(button.lower() == 'dock'):
-			return bool(state & 0x04)
+			return bool(data & 0x04)
 		elif(button.lower() == 'spot'):
-			return bool(state & 0x02)
+			return bool(data & 0x02)
 		elif(button.lower() == 'clean'):
-			return bool(state & 0x01)
-	def drive(velocityH, velocityL, radiusH, radiusL):
-		robot.send(chr(drive)+chr(velocityH)+chr(velocityL)+chr(radiusH)+chr(radiusL))
+			return bool(data & 0x01)
+	def drive(self, velocityH, velocityL, radiusH, radiusL):
+		self.robot.send(chr(drive)+chr(velocityH)+chr(velocityL)+chr(radiusH)+chr(radiusL))
 		return
 class main:
-	iRobot = rInterface()
-	#s = 'start'
-	iRobot.changeState()
+	iRobot = sInterface()
+	iRobot.connect()
+	iRobot.send(128)
+
