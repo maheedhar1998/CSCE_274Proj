@@ -12,11 +12,9 @@ class sInterface:
 	def send(self, opCode):
 		self.serialC.write(chr(opCode))
 		time.sleep(0.015)
-	#def sendMult(self, opCodes):
-		#x = ""
-		#for i in range(0, opCodes.len):
-			#x = x+chr(opCodes[i])
-		#self.serialC.write(x)
+	def sendMult(self, opCodes):
+		for i in range(0, len(opCodes):
+			self.send(opCodes[i])
 	def readD(self):
 		x = self.serialC.inWaiting()
 		#print(x)
@@ -47,8 +45,7 @@ class rInterface:
 			print "Error: Invalid arguement"
 		time.sleep(1)
 	def stateOfButton(self, button):
-		self.robot.send(self.sensors)
-		self.robot.send(self.buttonPacketID)
+		self.robot.sendMult([self.sensors, self.buttonPacketID])
 		data = self.robot.readD()
 		data = struct.unpack('B', data)[0]
 		if(button.lower() == 'clock'):
@@ -68,11 +65,7 @@ class rInterface:
 		elif(button.lower() == 'clean'):
 			return bool(data & 0x01)
 	def drives(self, velocityH, velocityL, radiusH, radiusL):
-		self.robot.send(self.drive)
-		self.robot.send(velocityH)
-		self.robot.send(velocityL)
-		self.robot.send(radiusH)
-		self.robot.send(radiusL)
+		self.robot.sendMult([self.drive, velocityH, velocityL, radiusH, radiusL])
 class main:
 	iRobot = rInterface()
 	iRobot.changeState('start')
