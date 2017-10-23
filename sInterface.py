@@ -25,7 +25,7 @@ class sInterface:
 		while True:
 			x = self.serialC.inWaiting()
 			if(x == size):
-				return self.serialC.read(x)
+				return self.serialC.read(size)
 	#This function closes the connection
 	def close(self):
 		self.serialC.close()

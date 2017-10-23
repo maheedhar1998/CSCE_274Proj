@@ -1,6 +1,26 @@
+import time
 import rInterface
-iRobot = rInterface()
+iRobot = rInterface.rInterface()
 iRobot.changeState('start')
 iRobot.changeState('full')
 iRobot.createSongs()
+#while True :
+	#x = iRobot.stateOfButtons()
+	#y = iRobot.getBumpsAndWheelDrops()
+	#z = iRobot.checkClass()
+	#if(x[7] or y[0] or y[1] or y[2] or y[3] or z[0] or z[1] or z[2] or z[3]):
+		#iRobot.directDrive(500, 500)
+		#iRobot.rotateRandom180()
+		#iRobot.directDrive(500, 500)
+#x = iRobot.checkCliffs()
 iRobot.playSong(0)
+time.sleep(5)
+iRobot.playSong(1)
+time.sleep(5)
+iRobot.playSong(2)
+time.sleep(5)
+print iRobot.getBumpsAndWheelDrops()
+print iRobot.stateOfButtons()
+iRobot.directDrive(28, 28, 1)
+print iRobot.getDistance()
+print iRobot.getAngle()
