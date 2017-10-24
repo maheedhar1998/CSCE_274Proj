@@ -35,10 +35,12 @@ class rInterface:
 		self.furElise = [76, 75, 76, 75, 76, 71, 74, 72, 69]
 		self.harryPotter = [71, 76, 79, 78, 76, 83, 81, 78, 76, 79, 78]
 		self.flashTheme = [62, 65, 69, 70, 69, 65, 62, 65, 69, 70, 69, 65, 62, 65, 62, 65]
+		self.fairyTail = [74, 76, 74, 72, 69, 67, 69, 72, 74, 72, 74, 76, 74, 72, 69, 67] 
 		self.noteLength = 16
 		self.isMoving = False
 		self.canMove = False
 		self.canContinue = True
+		self.createSongs()
 	#This function takes in a string and changes the state of the robot to the state given in the string
 	def changeState(self, state):
 		if(str(state) == 'start' or str(state) == 'passive'):
@@ -81,24 +83,25 @@ class rInterface:
 		#Gets data from the left cliff sensor
 		self.robot.sendMult([self.sensors, self.leftCliff])
 		leftData = self.robot.readData(1)
-		print leftData
+		#print leftData
 		leftData = struct.unpack('B', leftData)[0]
 		#Gets data from the front left cliff sensor
 		self.robot.sendMult([self.sensors, self.frontLeftCliff])
 		frontLeftData = self.robot.readData(1)
-		print frontLeftData
-		frontLeftData = struct.unpack('B', leftData)[0]
+		#print frontLeftData
+		frontLeftData = struct.unpack('B', frontLeftData)[0]
 		#Gets data from the front right cliff sensor
 		self.robot.sendMult([self.sensors, self.frontRightCliff])
 		frontRightData = self.robot.readData(1)
-		print frontRightData
-		frontRightData = struct.unpack('B', leftData)[0]
+		#print frontRightData
+		frontRightData = struct.unpack('B', frontRightData)[0]
 		#Gets data from the right cliff sensor
 		self.robot.sendMult([self.sensors, self.rightCliff])
 		rightData = self.robot.readData(1)
-		print rightData
-		rightData = struct.unpack('B', leftData)[0]
+		#print rightData
+		rightData = struct.unpack('B', rightData)[0]
 		cliffData = [bool(leftData & 0x01), bool(frontLeftData & 0x01), bool(frontRightData & 0x01), bool(rightData & 0x01)]
+		#print cliffData
 		return cliffData
 	def getDistance(self):
 		self.robot.sendMult([self.sensors, self.distanceSensor])
@@ -113,8 +116,28 @@ class rInterface:
 	def directDrive(self, rightVelocity, leftVelocity, sec):
 		right = self.getBytes(rightVelocity)
 		left = self.getBytes(leftVelocity)
+		#print right
+		#print left
+		self.playSong(0)
 		self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
 		self.sleepCheck(sec)
+		self.stopDrive()
+	def directDriveRotate(self, rightVelocity, leftVelocity, sec):
+		right = self.getBytes(rightVelocity)
+		left = self.getBytes(leftVelocity)
+		#print right
+		#print left
+		self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
+		run = time.time()+sec
+		while (time.time() < run):
+			a = self.stateOfButtons()
+			b = self.getBumpsAndWheelDrops()
+			if(a[7] or b[0] or b[1]):
+				self.stopDrive()
+				if(b[0] or b[1]):
+					self.playSong(2)
+					time.sleep(3)
+					exit()
 		self.stopDrive()
 	def getBytes(self, data):
 		Bytes = [0, 0]
@@ -126,18 +149,26 @@ class rInterface:
 				Bytes[1] = data
 			return Bytes
 		else:
-			data = data*-1
-			data = data ^ 0xFFFFFFFF
-			data = data+1
-			if(data > 255):
-				Bytes[0] = 1
-				Bytes[1] = data-256
-			else:
-				Bytes[1] = data
+			data = struct.pack('P', data)
+			Bytes[0] = struct.unpack('B', data[1])[0]
+			Bytes[1] = struct.unpack('B', data[0])[0]
 			return Bytes
 	def rotateRandom180(self):
 		angle = random.randint(150, 210)
-		
+		dist = (angle*self.robotCircumference)/360
+		tim = self.calcTime(dist, 500)
+		x = self.getBumpsAndWheelDrops()
+		if(x[2] and not x[3]):
+			self.directDriveRotate(-500, 500, tim)
+		elif(x[3] and not x[2]):
+			self.directDriveRotate(500, -500, tim)
+		elif(x[3] and x[2]):
+			a = [-1, 1]
+			b = random.randint(0,1)
+			b = a[b]
+			self.directDrive(500*b, 500*b*-1, tim)
+	def calcTime(self, distance, vel):
+		return distance/vel
 	def createSongs(self):
 		#Song 0 Fur Elise
 		print 'Writing Song 0 -- Fur Elise by Beethoven'
@@ -158,20 +189,28 @@ class rInterface:
 		self.flashTheme[9], self.noteLength/2, self.flashTheme[10], self.noteLength/2, self.flashTheme[11], self.noteLength/2, self.flashTheme[12], self.noteLength/2, self.flashTheme[13], self.noteLength/2,
 		self.flashTheme[14], self.noteLength/2, self.flashTheme[15], self.noteLength/2])
 		print 'Done'
+		time.sleep(2)
 	def playSong(self, num):
 		self.robot.sendMult([self.play, num])
 	def sleepCheck(self, sec):
 		run = time.time()+sec
 		while(time.time() < run):
-			print 'checking'
+			#print 'checking'
 			a = self.stateOfButtons()
 			b = self.getBumpsAndWheelDrops()
-			#c = self.checkCliffs()
-			if(a[7] or b[0] or b[1] or b[2] or b[3])# or c[0] or c[1] or c[2] or c[3]):
+			c = self.checkCliffs()
+			print c
+			if(a[7] or b[0] or b[1] or b[2] or b[3] or c[0] or c[1] or c[2] or c[3]):
+				print 'Stop Attempt'
 				self.stopDrive()
-		print 'done'
+				if(b[0] or b[1]):
+					self.playSong(2)
+					time.sleep(3)
+					exit()
+				return
 	def stopDrive(self):
-		self.robot.sendMult([self.directDrive, 0, 0, 0, 0])
+		print 'Stopping'
+		self.robot.sendMult([self.drive, 0, 0, 0, 0])
 	#This fumction takes in 4 integers and a float then usese the srive opcode to send the robot its velocity turning radius and how long to continue the motion
 	def drives(self, velocity, radius, sec):
 		if(self.canContinue == True):
