@@ -37,9 +37,6 @@ class rInterface:
 		self.flashTheme = [62, 65, 69, 70, 69, 65, 62, 65, 69, 70, 69, 65, 62, 65, 62, 65]
 		self.fairyTail = [74, 76, 74, 72, 69, 67, 69, 72, 74, 72, 74, 76, 74, 72, 69, 67] 
 		self.noteLength = 16
-		self.isMoving = False
-		self.canMove = False
-		self.canContinue = True
 		self.createSongs()
 	#This function takes in a string and changes the state of the robot to the state given in the string
 	def changeState(self, state):
@@ -118,7 +115,7 @@ class rInterface:
 		left = self.getBytes(leftVelocity)
 		#print right
 		#print left
-		self.playSong(0)
+		#self.playSong(0)
 		self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
 		self.sleepCheck(sec)
 		self.stopDrive()
@@ -189,6 +186,12 @@ class rInterface:
 		self.flashTheme[9], self.noteLength/2, self.flashTheme[10], self.noteLength/2, self.flashTheme[11], self.noteLength/2, self.flashTheme[12], self.noteLength/2, self.flashTheme[13], self.noteLength/2,
 		self.flashTheme[14], self.noteLength/2, self.flashTheme[15], self.noteLength/2])
 		print 'Done'
+		print 'Writing Song 3 -- Fairy Tail Theme song'
+		self.robot.sendMult([self.song, 3, 16, self.fairyTail[0], self.noteLength, self.fairyTail[1], self.noteLength/2, self.fairyTail[2], self.noteLength/2, self.fairyTail[3], self.noteLength,
+		self.fairyTail[4], self.noteLength, self.fairyTail[5], self.noteLength, self.fairyTail[6], self.noteLength/2, self.fairyTail[7], self.noteLength/2, self.fairyTail[8], self.noteLength, 
+		self.fairyTail[9], self.noteLength, self.fairyTail[10], self.noteLength, self.fairyTail[11], self.noteLength/2, self.fairyTail[12], self.noteLength/2, self.fairyTail[13], self.noteLength,
+		self.fairyTail[14], self.noteLength, self.fairyTail[15], self.noteLength])
+		print 'Done'
 		time.sleep(2)
 	def playSong(self, num):
 		self.robot.sendMult([self.play, num])
@@ -204,8 +207,8 @@ class rInterface:
 				print 'Stop Attempt'
 				self.stopDrive()
 				if(b[0] or b[1]):
-					self.playSong(2)
-					time.sleep(3)
+					self.playSong(3)
+					time.sleep(4)
 					exit()
 				return
 	def stopDrive(self):
@@ -213,9 +216,8 @@ class rInterface:
 		self.robot.sendMult([self.drive, 0, 0, 0, 0])
 	#This fumction takes in 4 integers and a float then usese the srive opcode to send the robot its velocity turning radius and how long to continue the motion
 	def drives(self, velocity, radius, sec):
-		if(self.canContinue == True):
-			vel = self.getBytes(velocity)
-			rad = self.getBytes(radius)
-			self.robot.sendMult([self.drive, vel[0], vel[1], rad[0], rad[1]])
-			self.sleepCheck(sec)
-			self.stopDrive()
+		vel = self.getBytes(velocity)
+		rad = self.getBytes(radius)
+		self.robot.sendMult([self.drive, vel[0], vel[1], rad[0], rad[1]])
+		self.sleepCheck(sec)
+		self.stopDrive()
