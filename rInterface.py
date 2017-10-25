@@ -37,7 +37,9 @@ class rInterface:
 		self.flashTheme = [62, 65, 69, 70, 69, 65, 62, 65, 69, 70, 69, 65, 62, 65, 62, 65]
 		self.fairyTail = [74, 76, 74, 72, 69, 67, 69, 72, 74, 72, 74, 76, 74, 72, 69, 67] 
 		self.noteLength = 16
+		self.canContinue = False
 		self.createSongs()
+		self.logFile = open('iRobot_Log.txt', 'w')
 	#This function takes in a string and changes the state of the robot to the state given in the string
 	def changeState(self, state):
 		if(str(state) == 'start' or str(state) == 'passive'):
@@ -103,12 +105,14 @@ class rInterface:
 	def getDistance(self):
 		self.robot.sendMult([self.sensors, self.distanceSensor])
 		dist = self.robot.readData(2)
-		dist = struct.unpack('h', dist)
+		dist = struct.unpack('h', dist)[0]
+		self.appendLogFile(str(time.ctime(time.time())+','+str(dist)+'\n'))
 		return dist
 	def getAngle(self):
 		self.robot.sendMult([self.sensors, self.angleSensor])
 		angle = self.robot.readData(2)
-		angle = struct.unpack('h', angle)
+		angle = struct.unpack('h', angle)[0]
+		self.appendLogFile(str(time.ctime(time.time())+','+str(angle)+'\n'))
 		return angle
 	def directDrive(self, rightVelocity, leftVelocity, sec):
 		right = self.getBytes(rightVelocity)
@@ -116,26 +120,48 @@ class rInterface:
 		#print right
 		#print left
 		#self.playSong(0)
-		self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
-		self.sleepCheck(sec)
-		self.stopDrive()
+		if(self.canContinue):
+			self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
+			self.sleepCheck(sec)
+			self.stopDrive()
+			print "stopped"
+		else:
+			while True:
+				x = self.stateOfButtons()
+				if(x[7]):
+					self.canContinue = True
+					return
 	def directDriveRotate(self, rightVelocity, leftVelocity, sec):
 		right = self.getBytes(rightVelocity)
 		left = self.getBytes(leftVelocity)
 		#print right
 		#print left
-		self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
-		run = time.time()+sec
-		while (time.time() < run):
-			a = self.stateOfButtons()
-			b = self.getBumpsAndWheelDrops()
-			if(a[7] or b[0] or b[1]):
-				self.stopDrive()
-				if(b[0] or b[1]):
-					self.playSong(2)
-					time.sleep(3)
-					exit()
-		self.stopDrive()
+		if(self.canContinue):
+			self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
+			run = time.time()+sec
+			while (time.time() < run):
+				a = self.stateOfButtons()
+				b = self.getBumpsAndWheelDrops()
+				if(a[7] or b[0] or b[1]):
+					self.stopDrive()
+					if(a[7]):
+						self.appendLogFile(str(time.ctime(time.time())+',BUTTON\n'))
+						self.playSong(2)
+						time.sleep(4)
+						self.canContinue = False
+					else:
+						self.appendLogFile(str(time.ctime(time.time())+',UNSAFE\n'))
+					if(b[0] or b[1]):
+						self.playSong(2)
+						time.sleep(3)
+						exit()
+			self.stopDrive()
+		else:
+			while True:
+				x = self.stateOfButtons()
+				if(x[7]):
+					self.canContinue = True
+					return
 	def getBytes(self, data):
 		Bytes = [0, 0]
 		if(data > 0):
@@ -186,6 +212,7 @@ class rInterface:
 		self.flashTheme[9], self.noteLength/2, self.flashTheme[10], self.noteLength/2, self.flashTheme[11], self.noteLength/2, self.flashTheme[12], self.noteLength/2, self.flashTheme[13], self.noteLength/2,
 		self.flashTheme[14], self.noteLength/2, self.flashTheme[15], self.noteLength/2])
 		print 'Done'
+		#Song 3 Fairy Tail Anime Theme song
 		print 'Writing Song 3 -- Fairy Tail Theme song'
 		self.robot.sendMult([self.song, 3, 16, self.fairyTail[0], self.noteLength, self.fairyTail[1], self.noteLength/2, self.fairyTail[2], self.noteLength/2, self.fairyTail[3], self.noteLength,
 		self.fairyTail[4], self.noteLength, self.fairyTail[5], self.noteLength, self.fairyTail[6], self.noteLength/2, self.fairyTail[7], self.noteLength/2, self.fairyTail[8], self.noteLength, 
@@ -202,17 +229,30 @@ class rInterface:
 			a = self.stateOfButtons()
 			b = self.getBumpsAndWheelDrops()
 			c = self.checkCliffs()
-			print c
+			#print c
+			#print a
 			if(a[7] or b[0] or b[1] or b[2] or b[3] or c[0] or c[1] or c[2] or c[3]):
-				print 'Stop Attempt'
+				#print 'Stop Attempt'
 				self.stopDrive()
-				if(b[0] or b[1]):
-					self.playSong(3)
+				if(a[7]):
+					self.appendLogFile(str(time.ctime(time.time())+',BUTTON\n'))
+					self.playSong(2)
 					time.sleep(4)
-					exit()
+					self.canContinue = False
+				else:
+					self.appendLogFile(str(time.ctime(time.time())+',UNSAFE\n'))
+					if(b[0] or b[1]):
+						self.playSong(3)
+						time.sleep(4)
+						self.saveLogFile()
+						exit()
+					if(c[0] or c[1] or c[2] or c[3]):
+						self.playSong(1)
+						time.sleep(4)
+						self.canContinue = False
 				return
 	def stopDrive(self):
-		print 'Stopping'
+		#print 'Stopping'
 		self.robot.sendMult([self.drive, 0, 0, 0, 0])
 	#This fumction takes in 4 integers and a float then usese the srive opcode to send the robot its velocity turning radius and how long to continue the motion
 	def drives(self, velocity, radius, sec):
@@ -221,3 +261,7 @@ class rInterface:
 		self.robot.sendMult([self.drive, vel[0], vel[1], rad[0], rad[1]])
 		self.sleepCheck(sec)
 		self.stopDrive()
+	def appendLogFile(self, line):
+		self.logFile.write(line)
+	def saveLogFile(self):
+		self.logFile.close()
