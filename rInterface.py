@@ -39,6 +39,8 @@ class rInterface:
 		self.noteLength = 16
 		self.canContinue = False
 		self.createSongs()
+		self.playSong(0)
+		time.sleep(5)
 		self.logFile = open('iRobot_Log.txt', 'w')
 	#This function takes in a string and changes the state of the robot to the state given in the string
 	def changeState(self, state):
@@ -124,7 +126,7 @@ class rInterface:
 			self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
 			self.sleepCheck(sec)
 			self.stopDrive()
-			print "stopped"
+			#print "stopped"
 		else:
 			while True:
 				x = self.stateOfButtons()
@@ -152,7 +154,7 @@ class rInterface:
 					else:
 						self.appendLogFile(str(time.ctime(time.time())+',UNSAFE\n'))
 					if(b[0] or b[1]):
-						self.playSong(2)
+						self.playSong(3)
 						time.sleep(3)
 						exit()
 			self.stopDrive()
@@ -189,7 +191,7 @@ class rInterface:
 			a = [-1, 1]
 			b = random.randint(0,1)
 			b = a[b]
-			self.directDrive(500*b, 500*b*-1, tim)
+			self.directDriveRotate(500*b, 500*b*-1, tim)
 	def calcTime(self, distance, vel):
 		return distance/vel
 	def createSongs(self):
@@ -236,19 +238,23 @@ class rInterface:
 				self.stopDrive()
 				if(a[7]):
 					self.appendLogFile(str(time.ctime(time.time())+',BUTTON\n'))
-					self.playSong(2)
+					self.playSong(1)
 					time.sleep(4)
 					self.canContinue = False
 				else:
 					self.appendLogFile(str(time.ctime(time.time())+',UNSAFE\n'))
+					#print b
+					b = self.getBumpsAndWheelDrops()
 					if(b[0] or b[1]):
 						self.playSong(3)
 						time.sleep(4)
 						self.saveLogFile()
+						#print 'exiting'
 						exit()
-					if(c[0] or c[1] or c[2] or c[3]):
-						self.playSong(1)
+					elif(c[0] or c[1] or c[2] or c[3]):
+						self.playSong(2)
 						time.sleep(4)
+						#print 'cliff'
 						self.canContinue = False
 				return
 	def stopDrive(self):
