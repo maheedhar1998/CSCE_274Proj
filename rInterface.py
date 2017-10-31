@@ -63,9 +63,9 @@ class rInterface:
 	def stateOfButtons(self):
 		self.robot.sendMult([self.sensors, self.buttonPacketID])
 		data = self.robot.readData(1)
-		#print('Press the Clean Button to start robot')
 		data = struct.unpack('B', data)[0]
 		return [bool(data & 0x80), bool(data & 0x40), bool(data & 0x20), bool(data & 0x10), bool(data & 0x08), bool(data & 0x04), bool(data & 0x02), bool(data & 0x01)]
+	#returns data from the bumps and wheel drop sensors
 	def getBumpsAndWheelDrops(self):
 		self.robot.sendMult([self.sensors, self.bumpsAndDrops])
 		data = self.robot.readData(1)
@@ -84,73 +84,72 @@ class rInterface:
 		#Gets data from the left cliff sensor
 		self.robot.sendMult([self.sensors, self.leftCliff])
 		leftData = self.robot.readData(1)
-		#print leftData
 		leftData = struct.unpack('B', leftData)[0]
 		#Gets data from the front left cliff sensor
 		self.robot.sendMult([self.sensors, self.frontLeftCliff])
 		frontLeftData = self.robot.readData(1)
-		#print frontLeftData
 		frontLeftData = struct.unpack('B', frontLeftData)[0]
 		#Gets data from the front right cliff sensor
 		self.robot.sendMult([self.sensors, self.frontRightCliff])
 		frontRightData = self.robot.readData(1)
-		#print frontRightData
 		frontRightData = struct.unpack('B', frontRightData)[0]
 		#Gets data from the right cliff sensor
 		self.robot.sendMult([self.sensors, self.rightCliff])
 		rightData = self.robot.readData(1)
-		#print rightData
 		rightData = struct.unpack('B', rightData)[0]
 		cliffData = [bool(leftData & 0x01), bool(frontLeftData & 0x01), bool(frontRightData & 0x01), bool(rightData & 0x01)]
-		#print cliffData
 		return cliffData
+	#get the distance from the distance and unpacks that data into and int
 	def getDistance(self):
 		self.robot.sendMult([self.sensors, self.distanceSensor])
 		dist = self.robot.readData(2)
 		dist = struct.unpack('h', dist)[0]
 		self.appendLogFile(str(time.ctime(time.time())+','+str(dist)+'\n'))
 		return dist
+	#return data from the angle sensor
 	def getAngle(self):
 		self.robot.sendMult([self.sensors, self.angleSensor])
 		angle = self.robot.readData(2)
 		angle = struct.unpack('h', angle)[0]
 		self.appendLogFile(str(time.ctime(time.time())+','+str(angle)+'\n'))
 		return angle
+	#implimenting drive direct and sets the velocity of the wheels. ALso stops the robot after a given amount of time
 	def directDrive(self, rightVelocity, leftVelocity, sec):
 		right = self.getBytes(rightVelocity)
 		left = self.getBytes(leftVelocity)
-		#print right
-		#print left
-		#self.playSong(0)
 		if(self.canContinue):
 			self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
 			self.sleepCheck(sec)
 			self.stopDrive()
-			#print "stopped"
 		else:
 			while True:
 				x = self.stateOfButtons()
+				#if clean button is pressed
 				if(x[7]):
+					#initates the while loop
 					self.canContinue = True
 					return
+	#defining the robots rotation
+	#checks all sensors except for cliffs and bumps while rotating
 	def directDriveRotate(self, rightVelocity, leftVelocity, sec):
 		right = self.getBytes(rightVelocity)
 		left = self.getBytes(leftVelocity)
-		#print right
-		#print left
 		if(self.canContinue):
 			self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
 			run = time.time()+sec
 			while (time.time() < run):
 				a = self.stateOfButtons()
 				b = self.getBumpsAndWheelDrops()
+				#if the clean button is pressed or if the wheel drop sensors specified return true then stop driving
 				if(a[7] or b[0] or b[1]):
 					self.stopDrive()
+					#this is specifically for the clean button:
 					if(a[7]):
 						self.appendLogFile(str(time.ctime(time.time())+',BUTTON\n'))
-						self.playSong(2)
+						self.playSong(1)
 						time.sleep(4)
 						self.canContinue = False
+					#and this is specifically for the wheel drop sensors:
 					else:
 						self.appendLogFile(str(time.ctime(time.time())+',UNSAFE\n'))
 					if(b[0] or b[1]):
@@ -164,6 +163,8 @@ class rInterface:
 				if(x[7]):
 					self.canContinue = True
 					return
+	#takes in an int and splits into seprerate bytes
+	#just to make it easier for the user so you don't have to set the individual byte code for each velocity
 	def getBytes(self, data):
 		Bytes = [0, 0]
 		if(data > 0):
@@ -178,15 +179,18 @@ class rInterface:
 			Bytes[0] = struct.unpack('B', data[1])[0]
 			Bytes[1] = struct.unpack('B', data[0])[0]
 			return Bytes
+	#tells the robot how much to rotate based of a random angle between 150 and 210 degrees
 	def rotateRandom180(self):
 		angle = random.randint(150, 210)
 		dist = (angle*self.robotCircumference)/360
 		tim = self.calcTime(dist, 500)
+		#after getting the bumps and wheel drops data and determines which direction to turn based of that data
 		x = self.getBumpsAndWheelDrops()
 		if(x[2] and not x[3]):
 			self.directDriveRotate(-500, 500, tim)
 		elif(x[3] and not x[2]):
 			self.directDriveRotate(500, -500, tim)
+		#if both bump sensors are pressed then it determines a random direction to turn
 		elif(x[3] and x[2]):
 			a = [-1, 1]
 			b = random.randint(0,1)
@@ -224,18 +228,18 @@ class rInterface:
 		time.sleep(2)
 	def playSong(self, num):
 		self.robot.sendMult([self.play, num])
+	#
 	def sleepCheck(self, sec):
 		run = time.time()+sec
+		#while loop runs until the current time = the goal time
 		while(time.time() < run):
-			#print 'checking'
 			a = self.stateOfButtons()
 			b = self.getBumpsAndWheelDrops()
 			c = self.checkCliffs()
-			#print c
-			#print a
+			#while it is running, it checks for the following sensors and stops driving if they return true
 			if(a[7] or b[0] or b[1] or b[2] or b[3] or c[0] or c[1] or c[2] or c[3]):
-				#print 'Stop Attempt'
 				self.stopDrive()
+				#the following is for the clean button
 				if(a[7]):
 					self.appendLogFile(str(time.ctime(time.time())+',BUTTON\n'))
 					self.playSong(1)
@@ -243,30 +247,30 @@ class rInterface:
 					self.canContinue = False
 				else:
 					self.appendLogFile(str(time.ctime(time.time())+',UNSAFE\n'))
-					#print b
 					b = self.getBumpsAndWheelDrops()
+					#the following is for the wheel drop
 					if(b[0] or b[1]):
 						self.playSong(3)
 						time.sleep(4)
 						self.saveLogFile()
-						#print 'exiting'
 						exit()
+					#the following is for the cliff sensors
 					elif(c[0] or c[1] or c[2] or c[3]):
 						self.playSong(2)
 						time.sleep(4)
-						#print 'cliff'
 						self.canContinue = False
 				return
+	#stops the robot
 	def stopDrive(self):
-		#print 'Stopping'
 		self.robot.sendMult([self.drive, 0, 0, 0, 0])
-	#This fumction takes in 4 integers and a float then usese the srive opcode to send the robot its velocity turning radius and how long to continue the motion
+	#This function takes in 4 integers and a float then usese the srive opcode to send the robot its velocity turning radius and how long to continue the motion
 	def drives(self, velocity, radius, sec):
 		vel = self.getBytes(velocity)
 		rad = self.getBytes(radius)
 		self.robot.sendMult([self.drive, vel[0], vel[1], rad[0], rad[1]])
 		self.sleepCheck(sec)
 		self.stopDrive()
+	#the following append and save the log file
 	def appendLogFile(self, line):
 		self.logFile.write(line)
 	def saveLogFile(self):
