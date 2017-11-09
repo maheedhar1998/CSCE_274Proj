@@ -26,6 +26,12 @@ class rInterface:
 		self.rightCliff = 12
 		self.distanceSensor = 19
 		self.angleSensor = 20
+		self.lightBumpLeft = 46
+		self.lightBumpFrontLeft = 47
+		self.lightBumpCenterLeft = 48
+		self.lightBumpCenterRight = 49
+		self.lightBumpFrontRight = 50
+		self.lightBumpRight = 51
 		self.drive = 137
 		self.driveDirect = 145
 		self.song = 140
@@ -57,9 +63,9 @@ class rInterface:
 		else:
 			print "Error: Invalid arguement"
 		time.sleep(2)
-	#This function takes in an instance of the object and returns a list of booleans that determine whether or not the buttons are pressed
-	#The list will be interpretted in this order: [Clock, Schedule, Day, Hour, Minute, Dock, Spot, Clean]
-	#The hexadecimal numbers in this function are interpreted from the info in the roomba open interface spec
+	"""This function takes in an instance of the object and returns a list of booleans that determine whether or not the buttons are pressed
+	The list will be interpretted in this order: [Clock, Schedule, Day, Hour, Minute, Dock, Spot, Clean]
+	The hexadecimal numbers in this function are interpreted from the info in the roomba open interface spec"""
 	def stateOfButtons(self):
 		self.robot.sendMult([self.sensors, self.buttonPacketID])
 		data = self.robot.readData(1)
@@ -103,15 +109,15 @@ class rInterface:
 	def getDistance(self):
 		self.robot.sendMult([self.sensors, self.distanceSensor])
 		dist = self.robot.readData(2)
-		dist = struct.unpack('h', dist)[0]
-		self.appendLogFile(str(time.ctime(time.time())+','+str(dist)+'\n'))
+		dist = struct.unpack('>h', dist)[0]
+		self.appendLogFile(str(time.ctime(time.time())+', distance: '+str(dist)+'\n'))
 		return dist
 	#return data from the angle sensor
 	def getAngle(self):
 		self.robot.sendMult([self.sensors, self.angleSensor])
 		angle = self.robot.readData(2)
-		angle = struct.unpack('h', angle)[0]
-		self.appendLogFile(str(time.ctime(time.time())+','+str(angle)+'\n'))
+		angle = struct.unpack('>h', angle)[0]
+		self.appendLogFile(str(time.ctime(time.time())+', angle: '+str(angle)+'\n'))
 		return angle
 	#implimenting drive direct and sets the velocity of the wheels. ALso stops the robot after a given amount of time
 	def directDrive(self, rightVelocity, leftVelocity, sec):
@@ -128,15 +134,16 @@ class rInterface:
 				if(x[7]):
 					#initates the while loop
 					self.canContinue = True
+					self.directDrive(rightVelocity, leftVelocity, sec)
 					return
-	#defining the robots rotation
-	#checks all sensors except for cliffs and bumps while rotating
+	"""defining the robots rotation
+	checks all sensors except for cliffs and bumps while rotating"""
 	def directDriveRotate(self, rightVelocity, leftVelocity, sec):
 		right = self.getBytes(rightVelocity)
 		left = self.getBytes(leftVelocity)
 		if(self.canContinue):
 			self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
-			run = time.time()+sec
+			run = time.time()+sec-.075
 			while (time.time() < run):
 				a = self.stateOfButtons()
 				b = self.getBumpsAndWheelDrops()
@@ -163,8 +170,8 @@ class rInterface:
 				if(x[7]):
 					self.canContinue = True
 					return
-	#takes in an int and splits into seprerate bytes
-	#just to make it easier for the user so you don't have to set the individual byte code for each velocity
+	"""takes in an int and splits into seprerate bytes
+	just to make it easier for the user so you don't have to set the individual byte code for each velocity"""
 	def getBytes(self, data):
 		Bytes = [0, 0]
 		if(data > 0):
@@ -180,22 +187,39 @@ class rInterface:
 			Bytes[1] = struct.unpack('B', data[0])[0]
 			return Bytes
 	#tells the robot how much to rotate based of a random angle between 150 and 210 degrees
-	def rotateRandom180(self):
+	def rotateRandom180(self, vel):
 		angle = random.randint(150, 210)
 		dist = (angle*self.robotCircumference)/360
-		tim = self.calcTime(dist, 500)
+		tim = self.calcTime(dist, vel)
 		#after getting the bumps and wheel drops data and determines which direction to turn based of that data
 		x = self.getBumpsAndWheelDrops()
 		if(x[2] and not x[3]):
-			self.directDriveRotate(-500, 500, tim)
+			self.directDriveRotate(vel*-1, vel, tim)
 		elif(x[3] and not x[2]):
-			self.directDriveRotate(500, -500, tim)
+			self.directDriveRotate(vel, vel*-1, tim)
 		#if both bump sensors are pressed then it determines a random direction to turn
 		elif(x[3] and x[2]):
 			a = [-1, 1]
 			b = random.randint(0,1)
 			b = a[b]
-			self.directDriveRotate(500*b, 500*b*-1, tim)
+			self.directDriveRotate(vel*b, vel*b*-1, tim)
+	def rotateAngle(self, vel, angle):
+		dist = (angle*self.robotCircumference)/360
+		tim = self.calcTime(dist, vel)
+		#after getting the bumps and wheel drops data and determines which direction to turn based of that data
+		x = self.getBumpsAndWheelDrops()
+		if(x[2] and not x[3]):
+			self.directDriveRotate(vel*-1, vel, tim)
+		elif(x[3] and not x[2]):
+			self.directDriveRotate(vel, vel*-1, tim)
+		#if both bump sensors are pressed then it determines a random direction to turn
+		elif(x[3] and x[2]):
+			a = [-1, 1]
+			b = random.randint(0,1)
+			b = a[b]
+			self.directDriveRotate(vel*b, vel*b*-1, tim)
+		else:
+			self.directDriveRotate(vel, vel*-1, tim)
 	def calcTime(self, distance, vel):
 		return distance/vel
 	def createSongs(self):
@@ -230,14 +254,16 @@ class rInterface:
 		self.robot.sendMult([self.play, num])
 	#
 	def sleepCheck(self, sec):
-		run = time.time()+sec
+		run = time.time()+sec-.075
 		#while loop runs until the current time = the goal time
 		while(time.time() < run):
 			a = self.stateOfButtons()
 			b = self.getBumpsAndWheelDrops()
 			c = self.checkCliffs()
+			d = [self.getLightBumpCenterLeft(), self.getLightBumpCenterRight()]
+			print d
 			#while it is running, it checks for the following sensors and stops driving if they return true
-			if(a[7] or b[0] or b[1] or b[2] or b[3] or c[0] or c[1] or c[2] or c[3]):
+			if(a[7] or b[0] or b[1] or b[2] or b[3] or c[0] or c[1] or c[2] or c[3] or d[0]>500 or d[1]>500):
 				self.stopDrive()
 				#the following is for the clean button
 				if(a[7]):
@@ -270,6 +296,36 @@ class rInterface:
 		self.robot.sendMult([self.drive, vel[0], vel[1], rad[0], rad[1]])
 		self.sleepCheck(sec)
 		self.stopDrive()
+	def getLightBumpLeft(self):
+		self.robot.sendMult([self.sensors, self.lightBumpLeft])
+		leftBump = self.robot.readData(2)
+		leftBump = struct.unpack('>h', leftBump)[0]
+		return leftBump
+	def getLightBumpFrontLeft(self):
+		self.robot.sendMult([self.sensors, self.lightBumpFrontLeft])
+		frontLeftBump = self.robot.readData(2)
+		frontLeftBump = struct.unpack('>h', frontLeftBump)[0]
+		return frontLeftBump
+	def getLightBumpCenterLeft(self):
+		self.robot.sendMult([self.sensors, self.lightBumpCenterLeft])
+		centerLeftBump = self.robot.readData(2)
+		centerLeftBump = struct.unpack('>h', centerLeftBump)[0]
+		return centerLeftBump
+	def getLightBumpCenterRight(self):
+		self.robot.sendMult([self.sensors, self.lightBumpCenterRight])
+		centerRightBump = self.robot.readData(2)
+		centerRightBump = struct.unpack('>h', centerRightBump)[0]
+		return centerRightBump
+	def getLightBumpFrontRight(self):
+		self.robot.sendMult([self.sensors, self.lightBumpFrontRight])
+		frontRightBump = self.robot.readData(2)
+		frontRightBump = struct.unpack('>h', frontRightBump)[0]
+		return frontRightBump
+	def getLightBumpRight(self):
+		self.robot.sendMult([self.sensors, self.lightBumpRight])
+		rightBump = self.robot.readData(2)
+		rightBump = struct.unpack('>h', rightBump)[0]
+		return rightBump
 	#the following append and save the log file
 	def appendLogFile(self, line):
 		self.logFile.write(line)

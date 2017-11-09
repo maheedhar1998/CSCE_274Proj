@@ -1,0 +1,12 @@
+import rInterface
+iRobot = rInterface.rInterface()
+iRobot.changeState('start')
+iRobot.changeState('safe')
+iRobot.getDistance()
+iRobot.getAngle()
+iRobot.directDrive(100,100,100)
+iRobot.getDistance()
+iRobot.getAngle()
+iRobot.rotateAngle(250,90)
+iRobot.getDistance()
+iRobot.getAngle()
