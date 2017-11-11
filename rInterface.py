@@ -169,6 +169,7 @@ class rInterface:
 				x = self.stateOfButtons()
 				if(x[7]):
 					self.canContinue = True
+					self.directDriveRotate(rightVelocity, leftVelocity, sec)
 					return
 	"""takes in an int and splits into seprerate bytes
 	just to make it easier for the user so you don't have to set the individual byte code for each velocity"""
@@ -252,7 +253,7 @@ class rInterface:
 		time.sleep(2)
 	def playSong(self, num):
 		self.robot.sendMult([self.play, num])
-	#
+	#checks for buttons, bumps, cliffs, and wheeldrops
 	def sleepCheck(self, sec):
 		run = time.time()+sec-.075
 		#while loop runs until the current time = the goal time
@@ -260,10 +261,10 @@ class rInterface:
 			a = self.stateOfButtons()
 			b = self.getBumpsAndWheelDrops()
 			c = self.checkCliffs()
-			d = [self.getLightBumpCenterLeft(), self.getLightBumpCenterRight()]
+			d = [self.getLightBumpRight(), self.getLightBumpFrontRight(), self.getLightBumpCenterRight()]
 			print d
 			#while it is running, it checks for the following sensors and stops driving if they return true
-			if(a[7] or b[0] or b[1] or b[2] or b[3] or c[0] or c[1] or c[2] or c[3] or d[0]>500 or d[1]>500):
+			if(a[7] or b[0] or b[1] or b[2] or b[3] or c[0] or c[1] or c[2] or c[3]):
 				self.stopDrive()
 				#the following is for the clean button
 				if(a[7]):
