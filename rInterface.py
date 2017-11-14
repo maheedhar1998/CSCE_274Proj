@@ -147,8 +147,9 @@ class rInterface:
 			while (time.time() < run):
 				a = self.stateOfButtons()
 				b = self.getBumpsAndWheelDrops()
+				c = self.getLightBumpRight()
 				#if the clean button is pressed or if the wheel drop sensors specified return true then stop driving
-				if(a[7] or b[0] or b[1]):
+				if(a[7] or b[0] or b[1] or c>400 and c<600):
 					self.stopDrive()
 					#this is specifically for the clean button:
 					if(a[7]):
@@ -156,9 +157,11 @@ class rInterface:
 						self.playSong(1)
 						time.sleep(4)
 						self.canContinue = False
+						return
 					#and this is specifically for the wheel drop sensors:
 					else:
 						self.appendLogFile(str(time.ctime(time.time())+',UNSAFE\n'))
+						return
 					if(b[0] or b[1]):
 						self.playSong(3)
 						time.sleep(3)
@@ -222,7 +225,7 @@ class rInterface:
 		else:
 			self.directDriveRotate(vel, vel*-1, tim)
 	def calcTime(self, distance, vel):
-		return distance/vel
+		return abs(distance/vel)
 	def createSongs(self):
 		#Song 0 Fur Elise
 		print 'Writing Song 0 -- Fur Elise by Beethoven'
@@ -262,9 +265,8 @@ class rInterface:
 			b = self.getBumpsAndWheelDrops()
 			c = self.checkCliffs()
 			d = [self.getLightBumpRight(), self.getLightBumpFrontRight(), self.getLightBumpCenterRight()]
-			print d
 			#while it is running, it checks for the following sensors and stops driving if they return true
-			if(a[7] or b[0] or b[1] or b[2] or b[3] or c[0] or c[1] or c[2] or c[3]):
+			if(a[7] or b[0] or b[1] or b[2] or b[3] or c[0] or c[1] or c[2] or c[3]  or d[0]>600 or d[1]<400):
 				self.stopDrive()
 				#the following is for the clean button
 				if(a[7]):
@@ -326,8 +328,15 @@ class rInterface:
 		self.robot.sendMult([self.sensors, self.lightBumpRight])
 		rightBump = self.robot.readData(2)
 		rightBump = struct.unpack('>h', rightBump)[0]
+		print rightBump
 		return rightBump
 	#the following append and save the log file
+	def alignToWall(self):
+		a = self.getLightBumpRight()
+		if(a<400):
+			self.directDriveRotate(-50,50,100)
+		elif(a>600):
+			self.directDriveRotate(50,-50,100)
 	def appendLogFile(self, line):
 		self.logFile.write(line)
 	def saveLogFile(self):
