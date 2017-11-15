@@ -4,6 +4,7 @@ import time
 import struct
 #imports the random pyhton module
 import random
+import math
 #imports the file sInterface.py
 import sInterface
 class rInterface:
@@ -26,6 +27,7 @@ class rInterface:
 		self.rightCliff = 12
 		self.distanceSensor = 19
 		self.angleSensor = 20
+		self.lightBumpers = 45
 		self.lightBumpLeft = 46
 		self.lightBumpFrontLeft = 47
 		self.lightBumpCenterLeft = 48
@@ -44,6 +46,11 @@ class rInterface:
 		self.fairyTail = [74, 76, 74, 72, 69, 67, 69, 72, 74, 72, 74, 76, 74, 72, 69, 67] 
 		self.noteLength = 16
 		self.canContinue = False
+		self.setPoint = 23
+		self.kp = 1
+		self.kd = .1
+		self.error = 0
+		self.prevError = 0
 		self.createSongs()
 		self.playSong(0)
 		time.sleep(5)
@@ -86,6 +93,7 @@ class rInterface:
 		if(bool(data & 0x08)):
 			bumpData[0] = True
 		return bumpData
+	#This function checks for cliffs
 	def checkCliffs(self):
 		#Gets data from the left cliff sensor
 		self.robot.sendMult([self.sensors, self.leftCliff])
@@ -126,7 +134,7 @@ class rInterface:
 		if(self.canContinue):
 			self.robot.sendMult([self.driveDirect, right[0], right[1], left[0], left[1]])
 			self.sleepCheck(sec)
-			self.stopDrive()
+			return
 		else:
 			while True:
 				x = self.stateOfButtons()
@@ -147,16 +155,23 @@ class rInterface:
 			while (time.time() < run):
 				a = self.stateOfButtons()
 				b = self.getBumpsAndWheelDrops()
-				c = self.getLightBumpRight()
+				c = self.calcPDVal(self.getLightBumpRight())
+				d = self.getLightBumpers()
+				if(self.getLightBumpRight()<2):
+					self.drivesAround()
+					return
+				if(d[2]):
+					self.rotateAngle(100,90)
+					return
 				#if the clean button is pressed or if the wheel drop sensors specified return true then stop driving
-				if(a[7] or b[0] or b[1] or c>400 and c<600):
-					self.stopDrive()
+				if(a[7] or b[0] or b[1] or c<5 and c>-5):
 					#this is specifically for the clean button:
 					if(a[7]):
 						self.appendLogFile(str(time.ctime(time.time())+',BUTTON\n'))
 						self.playSong(1)
 						time.sleep(4)
 						self.canContinue = False
+						self.stopDrive()
 						return
 					#and this is specifically for the wheel drop sensors:
 					else:
@@ -166,7 +181,6 @@ class rInterface:
 						self.playSong(3)
 						time.sleep(3)
 						exit()
-			self.stopDrive()
 		else:
 			while True:
 				x = self.stateOfButtons()
@@ -207,6 +221,7 @@ class rInterface:
 			b = random.randint(0,1)
 			b = a[b]
 			self.directDriveRotate(vel*b, vel*b*-1, tim)
+	#this function rotates the robot in palce a given angle
 	def rotateAngle(self, vel, angle):
 		dist = (angle*self.robotCircumference)/360
 		tim = self.calcTime(dist, vel)
@@ -224,8 +239,10 @@ class rInterface:
 			self.directDriveRotate(vel*b, vel*b*-1, tim)
 		else:
 			self.directDriveRotate(vel, vel*-1, tim)
+	#This function calcualtes time based on distance and velocity
 	def calcTime(self, distance, vel):
 		return abs(distance/vel)
+	#creates songs
 	def createSongs(self):
 		#Song 0 Fur Elise
 		print 'Writing Song 0 -- Fur Elise by Beethoven'
@@ -254,6 +271,7 @@ class rInterface:
 		self.fairyTail[14], self.noteLength, self.fairyTail[15], self.noteLength])
 		print 'Done'
 		time.sleep(2)
+	#plays Songs
 	def playSong(self, num):
 		self.robot.sendMult([self.play, num])
 	#checks for buttons, bumps, cliffs, and wheeldrops
@@ -264,16 +282,25 @@ class rInterface:
 			a = self.stateOfButtons()
 			b = self.getBumpsAndWheelDrops()
 			c = self.checkCliffs()
-			d = [self.getLightBumpRight(), self.getLightBumpFrontRight(), self.getLightBumpCenterRight()]
+			d = self.calcPDVal(self.getLightBumpRight())
+			e = self.getLightBumpRight()
+			f = self.getLightBumpers()
+			if(e < 2):
+				self.drivesAround()
+				return
+			if(f[2]):
+				self.rotateAngle(100,90)
+				return
 			#while it is running, it checks for the following sensors and stops driving if they return true
-			if(a[7] or b[0] or b[1] or b[2] or b[3] or c[0] or c[1] or c[2] or c[3]  or d[0]>600 or d[1]<400):
-				self.stopDrive()
+			if(a[7] or b[0] or b[1] or b[2] or b[3] or c[0] or c[1] or c[2] or c[3]  or d>5 or d<-5):
 				#the following is for the clean button
 				if(a[7]):
 					self.appendLogFile(str(time.ctime(time.time())+',BUTTON\n'))
 					self.playSong(1)
 					time.sleep(4)
 					self.canContinue = False
+					self.stopDrive()
+					return
 				else:
 					self.appendLogFile(str(time.ctime(time.time())+',UNSAFE\n'))
 					b = self.getBumpsAndWheelDrops()
@@ -288,6 +315,7 @@ class rInterface:
 						self.playSong(2)
 						time.sleep(4)
 						self.canContinue = False
+					return
 				return
 	#stops the robot
 	def stopDrive(self):
@@ -299,44 +327,74 @@ class rInterface:
 		self.robot.sendMult([self.drive, vel[0], vel[1], rad[0], rad[1]])
 		self.sleepCheck(sec)
 		self.stopDrive()
+	#This function drives around walls
+	def drivesAround(self):
+		byte = self.getBytes(-280)
+		self.robot.sendMult([self.drive, 0, 100, byte[0], byte[1]])
+		while True:
+			a = self.calcPDVal(self.getLightBumpRight())
+			b = self.getLightBumpers()
+			if(a<5 and a>-5 or b[2]):
+				return
+	#this function return a list of booleans that tell you which light bump sensors detect walls
+	def getLightBumpers(self):
+		self.robot.sendMult([self.sensors, self.lightBumpers])
+		lightBump = self.robot.readData(1)
+		lightBump = struct.unpack('B', lightBump)[0]
+		return [bool(lightBump&0x20), bool(lightBump&0x10), bool(lightBump&0x08), bool(lightBump&0x04), bool(lightBump&0x02), bool(lightBump&0x01)]
+	#The following get the data form the corresponding light bump sensors
 	def getLightBumpLeft(self):
 		self.robot.sendMult([self.sensors, self.lightBumpLeft])
 		leftBump = self.robot.readData(2)
-		leftBump = struct.unpack('>h', leftBump)[0]
+		leftBump = struct.unpack('>H', leftBump)[0]
+		leftBump = math.sqrt(leftBump)
 		return leftBump
 	def getLightBumpFrontLeft(self):
 		self.robot.sendMult([self.sensors, self.lightBumpFrontLeft])
 		frontLeftBump = self.robot.readData(2)
-		frontLeftBump = struct.unpack('>h', frontLeftBump)[0]
+		frontLeftBump = struct.unpack('>H', frontLeftBump)[0]
+		frontLeftBump = math.sqrt(frontLeftBump)
 		return frontLeftBump
 	def getLightBumpCenterLeft(self):
 		self.robot.sendMult([self.sensors, self.lightBumpCenterLeft])
 		centerLeftBump = self.robot.readData(2)
-		centerLeftBump = struct.unpack('>h', centerLeftBump)[0]
+		centerLeftBump = struct.unpack('>H', centerLeftBump)[0]
+		centerLeftBump = math.sqrt(centerLeftBump)
 		return centerLeftBump
 	def getLightBumpCenterRight(self):
 		self.robot.sendMult([self.sensors, self.lightBumpCenterRight])
 		centerRightBump = self.robot.readData(2)
-		centerRightBump = struct.unpack('>h', centerRightBump)[0]
+		centerRightBump = struct.unpack('>H', centerRightBump)[0]
+		centerRightBump = math.sqrt(centerRightBump)
 		return centerRightBump
 	def getLightBumpFrontRight(self):
 		self.robot.sendMult([self.sensors, self.lightBumpFrontRight])
 		frontRightBump = self.robot.readData(2)
-		frontRightBump = struct.unpack('>h', frontRightBump)[0]
+		frontRightBump = struct.unpack('>H', frontRightBump)[0]
+		frontRightBump = math.sqrt(frontRightBump)
 		return frontRightBump
 	def getLightBumpRight(self):
 		self.robot.sendMult([self.sensors, self.lightBumpRight])
 		rightBump = self.robot.readData(2)
-		rightBump = struct.unpack('>h', rightBump)[0]
-		print rightBump
+		rightBump = struct.unpack('>H', rightBump)[0]
+		rightBump = math.sqrt(rightBump)
 		return rightBump
-	#the following append and save the log file
+	#the following calculates the PD Value
+	def calcPDVal(self, current):
+		self.error = self.setPoint-current
+		pVal = self.kp*self.error
+		dVal = self.kd*(self.error-self.prevError)
+		self.prevError = self.error
+		PDVal = pVal+dVal
+		return PDVal
+	#This function Aligns the robot to the wall
 	def alignToWall(self):
-		a = self.getLightBumpRight()
-		if(a<400):
+		a = self.calcPDVal(self.getLightBumpRight())
+		if(a>5):
 			self.directDriveRotate(-50,50,100)
-		elif(a>600):
+		elif(a<-5):
 			self.directDriveRotate(50,-50,100)
+	#The following append and save the log file
 	def appendLogFile(self, line):
 		self.logFile.write(line)
 	def saveLogFile(self):
