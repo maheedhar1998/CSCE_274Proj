@@ -34,6 +34,9 @@ class rInterface:
 		self.lightBumpCenterRight = 49
 		self.lightBumpFrontRight = 50
 		self.lightBumpRight = 51
+		self.IROmni = 17
+		self.IRLeft = 52
+		slef.IRRight = 53
 		self.drive = 137
 		self.driveDirect = 145
 		self.song = 140
@@ -394,6 +397,21 @@ class rInterface:
 			self.directDriveRotate(-50,50,100)
 		elif(a<-5):
 			self.directDriveRotate(50,-50,100)
+	def getIRCharOmni(self):
+		self.robot.sendMult([self.sensors, self.IROmni])
+		IRCharOmni = self.robot.readData(1)
+		IRCharOmni = struct.unpack('B', IRCharOmni)[0]
+		return IRCharOmni
+	def getIRCharLeft(self):
+		self.robot.sendMult([self.sensors, self.IRLeft])
+		IRCharLeft = self.robot.readData(1)
+		IRCharLeft = struct.unpack('B', IRCharLeft)[0]
+		return IRCharLeft
+	def getIRCharRight(self):
+		self.robot.sendMult([self.sensors, self.IRRight])
+		IRCharRight = self.robot.readData(1)
+		IRCharRight = struct.unpack('B', IRCharRight)[0]
+		return IRCharRight
 	#The following append and save the log file
 	def appendLogFile(self, line):
 		self.logFile.write(line)
