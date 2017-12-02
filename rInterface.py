@@ -36,7 +36,7 @@ class rInterface:
 		self.lightBumpRight = 51
 		self.IROmni = 17
 		self.IRLeft = 52
-		slef.IRRight = 53
+		self.IRRight = 53
 		self.drive = 137
 		self.driveDirect = 145
 		self.song = 140
@@ -46,7 +46,7 @@ class rInterface:
 		self.furElise = [76, 75, 76, 75, 76, 71, 74, 72, 69]
 		self.harryPotter = [71, 76, 79, 78, 76, 83, 81, 78, 76, 79, 78]
 		self.flashTheme = [62, 65, 69, 70, 69, 65, 62, 65, 69, 70, 69, 65, 62, 65, 62, 65]
-		self.fairyTail = [74, 76, 74, 72, 69, 67, 69, 72, 74, 72, 74, 76, 74, 72, 69, 67] 
+		self.fairyTail = [74, 76, 74, 72, 69, 67, 69, 72, 74, 72, 74, 76, 74, 72, 69, 67]
 		self.noteLength = 16
 		self.canContinue = False
 		self.setPoint = 23
@@ -269,7 +269,7 @@ class rInterface:
 		#Song 3 Fairy Tail Anime Theme song
 		print 'Writing Song 3 -- Fairy Tail Theme song'
 		self.robot.sendMult([self.song, 3, 16, self.fairyTail[0], self.noteLength, self.fairyTail[1], self.noteLength/2, self.fairyTail[2], self.noteLength/2, self.fairyTail[3], self.noteLength,
-		self.fairyTail[4], self.noteLength, self.fairyTail[5], self.noteLength, self.fairyTail[6], self.noteLength/2, self.fairyTail[7], self.noteLength/2, self.fairyTail[8], self.noteLength, 
+		self.fairyTail[4], self.noteLength, self.fairyTail[5], self.noteLength, self.fairyTail[6], self.noteLength/2, self.fairyTail[7], self.noteLength/2, self.fairyTail[8], self.noteLength,
 		self.fairyTail[9], self.noteLength, self.fairyTail[10], self.noteLength, self.fairyTail[11], self.noteLength/2, self.fairyTail[12], self.noteLength/2, self.fairyTail[13], self.noteLength,
 		self.fairyTail[14], self.noteLength, self.fairyTail[15], self.noteLength])
 		print 'Done'
@@ -393,10 +393,8 @@ class rInterface:
 	#This function Aligns the robot to the wall
 	def alignToWall(self):
 		a = self.calcPDVal(self.getLightBumpRight())
-		if(a>5):
-			self.directDriveRotate(-50,50,100)
-		elif(a<-5):
-			self.directDriveRotate(50,-50,100)
+		a = int(a)
+		self.directDrive(50-a, 50+a, 100)
 	def getIRCharOmni(self):
 		self.robot.sendMult([self.sensors, self.IROmni])
 		IRCharOmni = self.robot.readData(1)
