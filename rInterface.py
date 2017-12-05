@@ -49,12 +49,14 @@ class rInterface:
 		self.fairyTail = [74, 76, 74, 72, 69, 67, 69, 72, 74, 72, 74, 76, 74, 72, 69, 67]
 		self.noteLength = 16
 		self.canContinue = False
+		self.isDocked = False
 		self.setPoint = 23
 		self.kp = 1
 		self.kd = .1
 		self.error = 0
 		self.prevError = 0
 		self.createSongs()
+		time.sleep(5)
 		self.playSong(0)
 		time.sleep(5)
 		self.logFile = open('iRobot_Log.txt', 'w')
@@ -288,6 +290,12 @@ class rInterface:
 			d = self.calcPDVal(self.getLightBumpRight())
 			e = self.getLightBumpRight()
 			f = self.getLightBumpers()
+			g = self.getIRChar()
+			print g
+			if(g[0]!=0 or g[1]!=0 or g[2]!= 0):
+				self.stopDrive()
+				self.canContinue = False
+				return
 			if(e < 2):
 				self.drivesAround()
 				return
@@ -410,6 +418,15 @@ class rInterface:
 		IRCharRight = self.robot.readData(1)
 		IRCharRight = struct.unpack('B', IRCharRight)[0]
 		return IRCharRight
+	def getIRChar(self):
+		return [self.getIRCharLeft(), self.getIRCharRight(), self.getIRCharOmni()]
+	def seekDock(self):
+		# while(not self.isDocked):
+		# 	l = self.getIRCharLeft()
+		# 	r = self.getIRCharRight()
+		# 	o = self.getIRCharOmni()
+		# 	if(l == 168 and r == 0):
+		# 		self.rotateAngle(50, 45)
 	#The following append and save the log file
 	def appendLogFile(self, line):
 		self.logFile.write(line)
